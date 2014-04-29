@@ -43,6 +43,12 @@ public class Navigator {
 		this.map = map;
 	}
 	
+	public Navigator(LatLng startLocation, LatLng endLocation){
+        this.startPosition = startLocation;
+        this.endPosition = endLocation;
+        lines = new ArrayList<Polyline>();
+    }
+
 	public interface OnPathSetListener{
 		public void onPathSetListener(Directions directions);
 	}
@@ -51,6 +57,13 @@ public class Navigator {
 		this.listener = listener;
 	}
 	
+	/**
+	 * Set the GoogleMap 
+	 */
+	public void setMap(GoogleMap map){
+        this.map = map;
+    }
+
 	/**
 	 * Gets the starting location for the directions 
 	 * 
@@ -79,6 +92,19 @@ public class Navigator {
 	public void findDirections(boolean findAlternatives){
 		this.alternatives = findAlternatives;
 		new PathCreator().execute();
+	}
+
+	public void showRouteInMap(GoogleMap map){	
+		for(int i=0; i<directions.getRoutes().size(); i++){
+			Route r = directions.getRoutes().get(i);
+			if(i == 0){
+				lines.add(showPath(r,pathColor));
+			}else if(i == 1){
+				lines.add(showPath(r,secondPath));
+			}else if(i == 3){
+				lines.add(showPath(r,thirdPath));
+			}
+		}	
 	}
 	
 	/**
@@ -213,17 +239,6 @@ public class Navigator {
 			
 			if(directions != null){
 				Navigator.this.directions = directions;
-				for(int i=0; i<directions.getRoutes().size(); i++){
-					Route r = directions.getRoutes().get(i);
-					if(i == 0){
-						lines.add(showPath(r,pathColor));
-					}else if(i == 1){
-						lines.add(showPath(r,secondPath));
-					}else if(i == 3){
-						lines.add(showPath(r,thirdPath));
-					}
-				}
-
 				if(listener != null){
 					listener.onPathSetListener(directions);
 				}
@@ -232,5 +247,4 @@ public class Navigator {
 		}
 		
 	}
-
 }
