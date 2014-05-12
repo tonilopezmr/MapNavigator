@@ -1,4 +1,4 @@
-package com.tyczj.mapnavigator;
+package com.chirinex.app.libraries.MapNavigator.src.com.tyczj.mapnavigator;
 
 import java.util.ArrayList;
 

@@ -1,4 +1,4 @@
-package com.tyczj.mapnavigator;
+package com.chirinex.app.libraries.MapNavigator.src.com.tyczj.mapnavigator;
 
 import java.util.ArrayList;
 
@@ -8,7 +8,7 @@ import org.json.JSONObject;
 
 public class Directions {
 	
-	private ArrayList<Route> routes = new ArrayList<Route>();
+	private ArrayList<Route> routes;
 	private String directions;
 	
 	public enum DrivingMode{
@@ -21,14 +21,18 @@ public class Directions {
 	
 	public Directions(String directions){
 		this.directions = directions;
-		
+        routes = new ArrayList<Route>();
 		if(directions != null){
 			parseDirections();
 		}
-
 	}
-	
-	private void parseDirections(){
+
+    public Directions(Route route) {
+        routes = new ArrayList<Route>();
+        routes.add(route);
+    }
+
+    private void parseDirections(){
 		try {
 			JSONObject json = new JSONObject(directions);
 
@@ -51,5 +55,4 @@ public class Directions {
 	public ArrayList<Route> getRoutes(){
 		return routes;
 	}
-
 }

@@ -1,4 +1,4 @@
-package com.tyczj.mapnavigator;
+package com.chirinex.app.libraries.MapNavigator.src.com.tyczj.mapnavigator;
 
 import java.util.ArrayList;
 
@@ -25,7 +25,6 @@ public class Navigator {
 	private Context context;
 	private LatLng startPosition, endPosition;
 	private String mode;
-	private GoogleMap map;
 	private Directions directions;
 	private int pathColor = Color.BLUE;
 	private int secondPath = Color.CYAN;
@@ -37,15 +36,14 @@ public class Navigator {
 	private String avoid;
 	private ArrayList<Polyline> lines = new ArrayList<Polyline>();
 	
-	public Navigator(GoogleMap map, LatLng startLocation, LatLng endLocation){
-		this.startPosition = startLocation;
-		this.endPosition = endLocation;
-		this.map = map;
-	}
-	
 	public Navigator(LatLng startLocation, LatLng endLocation){
         this.startPosition = startLocation;
         this.endPosition = endLocation;
+        lines = new ArrayList<Polyline>();
+    }
+
+    public Navigator(Directions directions){
+        this.directions = directions;
         lines = new ArrayList<Polyline>();
     }
 
@@ -56,13 +54,6 @@ public class Navigator {
 	public void setOnPathSetListener(OnPathSetListener listener){
 		this.listener = listener;
 	}
-	
-	/**
-	 * Set the GoogleMap 
-	 */
-	public void setMap(GoogleMap map){
-        this.map = map;
-    }
 
 	/**
 	 * Gets the starting location for the directions 
@@ -82,8 +73,7 @@ public class Navigator {
 	
 	/**
 	 * Get's driving directions from the starting location to the ending location
-	 * 
-	 * @param showDialog 
+	 *
 	 *  Set to true if you want to show a ProgressDialog while retrieving directions
 	 *  @param findAlternatives
 	 *  give alternative routes to the destination
@@ -94,18 +84,45 @@ public class Navigator {
 		new PathCreator().execute();
 	}
 
-	public void showRouteInMap(GoogleMap map){	
+    /**
+     * Get's driving directions from the starting location to the ending location
+     *
+     *  Set to true if you want to show a ProgressDialog while retrieving directions
+     *  @param findAlternatives
+     *  give alternative routes to the destination
+     *
+     */
+    public void findDirectionsAndShow(GoogleMap map, boolean findAlternatives){
+        this.alternatives = findAlternatives;
+        new PathCreatorAndShow(map).execute();
+    }
+
+    /**
+     * Show the rutes in the map
+     *
+     * @param map
+     */
+	public void showRouteInMap(GoogleMap map){
 		for(int i=0; i<directions.getRoutes().size(); i++){
 			Route r = directions.getRoutes().get(i);
 			if(i == 0){
-				lines.add(showPath(r,pathColor));
+				lines.add(showPath(map, r,pathColor));
 			}else if(i == 1){
-				lines.add(showPath(r,secondPath));
+				lines.add(showPath(map, r,secondPath));
 			}else if(i == 3){
-				lines.add(showPath(r,thirdPath));
+				lines.add(showPath(map, r,thirdPath));
 			}
 		}	
 	}
+
+    /**
+     * Show the rute in the map
+     *
+     * @param map
+     */
+    public void showRouteInMap(GoogleMap map, Route route){
+        lines.add(showPath(map, route, pathColor));
+    }
 	
 	/**
 	 * Sets the type of direction you want (driving,walking,biking or mass transit). This MUST be called before getting the directions
@@ -181,7 +198,7 @@ public class Navigator {
 		pathWidth = width;
 	}
 	
-	private Polyline showPath(Route route,int color){
+	private Polyline showPath(GoogleMap map, Route route,int color){
 		return map.addPolyline(new PolylineOptions().addAll(route.getPath()).color(color).width(pathWidth));
 	}
 	
@@ -189,6 +206,9 @@ public class Navigator {
 		return lines;
 	}
 
+	/*
+	 * Single Path Creator 
+	 */
 	private class PathCreator extends AsyncTask<Void,Void,Directions>{
 
 		@Override
@@ -225,8 +245,7 @@ public class Navigator {
 		            	String s = EntityUtils.toString(response.getEntity());
 			            return new Directions(s);
 		            }
-		            
-		            
+
 		            return null;
 		        } catch (Exception e) {
 		            e.printStackTrace();
@@ -236,15 +255,80 @@ public class Navigator {
 		
 		@Override
 		protected void onPostExecute(Directions directions){
-			
 			if(directions != null){
 				Navigator.this.directions = directions;
 				if(listener != null){
 					listener.onPathSetListener(directions);
 				}
-				
 			}
 		}
 		
 	}
+
+	/*
+	 * Create and Show Routes.
+	 */
+    private class PathCreatorAndShow extends AsyncTask<Void,Void,Directions>{
+
+        private GoogleMap map;
+
+        private PathCreatorAndShow(GoogleMap map) {
+            this.map = map;
+        }
+
+        @Override
+        protected Directions doInBackground(Void ... params) {
+            if(mode == null){
+                mode = "driving";
+            }
+
+            String url = "http://maps.googleapis.com/maps/api/directions/json?"
+                    + "origin=" + startPosition.latitude + "," + startPosition.longitude
+                    + "&destination=" + endPosition.latitude + "," + endPosition.longitude
+                    + "&sensor=false&units=metric&mode="+mode+"&alternatives="+String.valueOf(alternatives);
+
+            if(mode.equals("transit")){
+                if(arrivalTime > 0){
+                    url += url + "&arrival_time="+arrivalTime;
+                }else{
+                    url += url + "&departure_time="+System.currentTimeMillis();
+                }
+            }
+
+            if(avoid != null){
+                url += url+"&avoid="+avoid;
+            }
+
+            try {
+                HttpClient httpClient = new DefaultHttpClient();
+                HttpContext localContext = new BasicHttpContext();
+                HttpPost httpPost = new HttpPost(url);
+                HttpResponse response = httpClient.execute(httpPost, localContext);
+
+                if(response.getStatusLine().getStatusCode() == HttpStatus.SC_OK){
+
+                    String s = EntityUtils.toString(response.getEntity());
+                    return new Directions(s);
+                }
+
+                return null;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Directions directions){
+
+            if(directions != null){
+                Navigator.this.directions = directions;
+                showRouteInMap(map);
+                if(listener != null){
+                    listener.onPathSetListener(directions);
+                }
+            }
+        }
+
+    }
 }

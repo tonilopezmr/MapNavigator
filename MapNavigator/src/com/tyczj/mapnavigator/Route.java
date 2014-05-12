@@ -1,4 +1,4 @@
-package com.tyczj.mapnavigator;
+package com.chirinex.app.libraries.MapNavigator.src.com.tyczj.mapnavigator;
 
 import java.util.ArrayList;
 
@@ -20,8 +20,10 @@ public class Route {
 	private LatLngBounds bounds;
 	private String startAddress;
 	private String endAddress;
-	
+	private JSONObject route;
+
 	public Route(JSONObject route){
+        this.route = route;
 		parseRoute(route);
 	}
 	
@@ -142,4 +144,7 @@ public class Route {
 		return endLoc;
 	}
 
+    public JSONObject getJSONRoute() {
+        return route;
+    }
 }
